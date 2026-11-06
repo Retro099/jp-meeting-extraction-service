@@ -1,0 +1,34 @@
+{
+  "model": "qwen/qwen-2.5-72b-instruct",
+  "temperature": 0,
+  "defenses_enabled": "1",
+  "notes": 30,
+  "failed_calls": 0,
+  "correct": 91,
+  "total": 150,
+  "exact_match": 0.6067,
+  "per_field": {
+    "会社名": {
+      "correct": 29,
+      "total": 30
+    },
+    "相手": {
+      "correct": 30,
+      "total": 30
+    },
+    "次アクション": {
+      "correct": 7,
+      "total": 30
+    },
+    "期限": {
+      "correct": 25,
+      "total": 30
+    },
+    "リスク": {
+      "correct": 0,
+      "total": 30
+    }
+  },
+  "prompt_tokens": 19533,
+  "completion_tokens": 2097
+}

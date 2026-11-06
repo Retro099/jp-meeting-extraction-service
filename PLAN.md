@@ -3,7 +3,7 @@
 One project, two links: core (evaluation and defences, https://github.com/Retro099/jp-meeting-to-crm-fields) and service (this repo).
 
 ## Steps (about 10-14 days, estimate)
-1. Repo skeleton, reuse core, reproduce 59.8% exact match locally
+1. Repo skeleton, reuse core, reproduce 59.8% exact match locally — **Done 2026-11-06**: core pinned to v1.0.0 (7e24c95), one single-call run gave 91/150 = 60.7% (see eval/README.md)
 2. Freeze test set (30 notes, 20 held-out attacks), add baseline file
 3. API handler running locally with tests — **Checkpoint 1**
 4. Deploy on AWS Lambda (or ECS Express Mode): secrets in AWS secret store, API key auth, throttle, daily cap, budget alert
@@ -24,4 +24,5 @@ Public URL with API key auth, throttle, daily cap, budget alert; CI eval gate; p
 ## Known limitations
 Every shortcut listed here needs Prithivi's OK.
 
-- (none yet)
+- Core is pinned to v1.0.0 (7e24c95); the 59.8% baseline came from eval v2 (2026-10-27) on later core code. Pinning a newer commit needs Prithivi's OK. (open)
+- Step 1 is one run, not the 3-run mean. (open)

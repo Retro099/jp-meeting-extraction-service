@@ -1,0 +1,2 @@
+# Core pinned to v1.0.0 (commit 7e24c95524d1387f7143628ef5bc0d61a06e7890), reused, not rewritten.
+jp-meeting-to-crm-fields @ git+https://github.com/Retro099/jp-meeting-to-crm-fields@7e24c95524d1387f7143628ef5bc0d61a06e7890
