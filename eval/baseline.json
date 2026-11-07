@@ -1,0 +1,56 @@
+{
+  "official_headline": {
+    "exact_match_single_call": 0.598,
+    "display": "59.8%",
+    "path": "single_call",
+    "notes": 30,
+    "fields": 150,
+    "fields_per_note": 5,
+    "defences": "on",
+    "runs": 3,
+    "source": "core eval v2, 2026-10-27",
+    "is_official": true
+  },
+  "agent": {
+    "exact_match": 0.584,
+    "display": "58.4%",
+    "note": "no gain",
+    "is_official": true
+  },
+  "held_out_attacks": {
+    "n": 20,
+    "file": "frozen/attacks_v2_heldout.jsonl",
+    "single_call": {"off": 0.30, "on": 0.083, "display": "30% → 8.3%"},
+    "agent": {"off": 0.30, "on": 0.10, "display": "30% → 10%"},
+    "is_official": true
+  },
+  "cost": {
+    "approx_inr_per_note": 0.022,
+    "display": "about Rs 0.022 per note"
+  },
+  "step1_reproduction": {
+    "date": "2026-11-06",
+    "correct": 91,
+    "total": 150,
+    "exact_match": 0.6067,
+    "display": "91/150 = 60.7%",
+    "gap_points_vs_official": 0.9,
+    "is_official_baseline": false,
+    "runs": 1,
+    "path": "single_call",
+    "defences": "on",
+    "core_pin": "v1.0.0 / 7e24c95524d1387f7143628ef5bc0d61a06e7890",
+    "per_field_correct_out_of_30": {
+      "相手": 30,
+      "会社名": 29,
+      "期限": 25,
+      "次アクション": 7,
+      "リスク": 0
+    },
+    "details": "runs/2026-11-06/summary.json"
+  },
+  "do_not_headline": [
+    "45% → 6.7% (circular, older self-written 40-attack set)",
+    "60.0% (single backup-model run)"
+  ]
+}

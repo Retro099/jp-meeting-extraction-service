@@ -14,4 +14,4 @@ Synthetic data only. `data/gold_30.jsonl` is copied unchanged from the core repo
 | Failed calls | 0 of 30 |
 
 Per field: 会社名 29/30, 相手 30/30, 次アクション 7/30, 期限 25/30, リスク 0/30 (free-text fields score low on strict exact match).
-Frozen test set and baseline file come in step 2.
+The frozen copies and checksums are in `frozen/` (see `frozen/MANIFEST.md`). Official headlines stay in `BASELINE.md` / `baseline.json`; 60.7% is not a new official baseline.

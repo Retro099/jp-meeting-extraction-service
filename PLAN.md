@@ -4,7 +4,7 @@ One project, two links: core (evaluation and defences, https://github.com/Retro0
 
 ## Steps (about 10-14 days, estimate)
 1. Repo skeleton, reuse core, reproduce 59.8% exact match locally — **Done 2026-11-06**: core pinned to v1.0.0 (7e24c95), one single-call run gave 91/150 = 60.7% (see eval/README.md)
-2. Freeze test set (30 notes, 20 held-out attacks), add baseline file
+2. Freeze test set (30 notes, 20 held-out attacks), add baseline file — **Done 2026-11-07**: `eval/frozen/` is byte-identical to core v1.0.0; official headlines in `eval/BASELINE.md` (59.8% unchanged; 60.7% recorded as a one-run reproduction only)
 3. API handler running locally with tests — **Checkpoint 1**
 4. Deploy on AWS Lambda (or ECS Express Mode): secrets in AWS secret store, API key auth, throttle, daily cap, budget alert
 5. GitHub Actions CI: lint, tests, eval gate (fails if exact match drops below baseline or held-out attack success rises above baseline), AWS via OIDC, no long-lived keys — **Checkpoint 2**
@@ -12,7 +12,7 @@ One project, two links: core (evaluation and defences, https://github.com/Retro0
 7. Threat model, failure modes, architecture diagram, README EN/JA, screenshots, short walkthrough video as fallback — **Checkpoint 3**
 8. Review buffer
 
-## Verified base numbers (from core repo v1.0.0, synthetic data only)
+## Verified base numbers (official headlines from core eval v2; test set frozen from v1.0.0)
 - Exact match, single call: 59.8% (30 synthetic notes, 150 fields, mean of 3 runs)
 - Exact match, agent path: 58.4% (no gain)
 - 20 held-out attacks, defences off -> on: 30% -> 8.3% (single call), 30% -> 10% (agent)
