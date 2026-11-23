@@ -17,3 +17,17 @@ jobs:
       - run: pytest -v
       - name: Run CI Evaluation Gate
         run: python eval/eval_gate.py
+
+  package-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies and package in editable mode
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+      - name: Run HTTP server smoke test
+        run: python tests/smoke_test.py
