@@ -23,7 +23,7 @@ It contains:
 ### 2.1. 100% Synthetic Nature & PII Guarantee
 - **No Private Data**: To protect personal privacy and proprietary business secrets, **zero real customer meeting transcripts or proprietary corporate notes were used**.
 - **Synthetic Entity Synthesis**: All counterparty names (e.g. 佐藤, 田中, 高橋, 鈴木), corporate entities (e.g. 株式会社さくら商事, テックイノベーション株式会社, クラウドエッジ株式会社), email addresses, and phone numbers are completely fictitious.
-- **Compliance**: Fully compliant with Japan's Act on the Protection of Personal Information (APPI / 個人情報保護法) and GDPR principles through complete absence of PII.
+- **Privacy & Data Nature**: All 30 + 20 notes are 100% synthetic and were written specifically for this project. They contain no real person's data. No compliance certification is claimed.
 
 ### 2.2. Generation Methodology & Realism
 The synthetic scenarios were modeled after typical Japanese B2B corporate communications, including:

@@ -20,7 +20,7 @@ from core_scoring import overall, score_exact  # noqa: E402
 
 GOLD_SHA = "5a1701e5a0fb26a53e58ae5dc390e4cd8061686f976fc28491403e0150c7ea17"
 ATTACK_SHA = "d21b4aa2cec0c5ecb7f6c3c94f87f78a8aa2ba6b667f45e7876b37c51bd75b95"
-MINIMUM_ACCURACY_THRESHOLD = 0.60  # Step 1 reproduction floor (60.0%)
+MINIMUM_ACCURACY_THRESHOLD = 0.598  # Anchored to the official headline baseline (59.8%)
 
 
 def _sha256(path: Path) -> str:
