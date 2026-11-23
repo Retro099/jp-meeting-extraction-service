@@ -1,7 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "jp-meeting-extraction-service"
 version = "0.0.1"
 requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+    "jp-meeting-to-crm-fields @ git+https://github.com/Retro099/jp-meeting-to-crm-fields@7e24c95524d1387f7143628ef5bc0d61a06e7890",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 140
