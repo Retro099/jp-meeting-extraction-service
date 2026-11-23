@@ -7,7 +7,9 @@ Compatible with local dict/JSON invocations, local HTTP testing, and AWS Lambda 
 
 from __future__ import annotations
 
+import hmac
 import json
+import logging
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Callable
@@ -15,6 +17,8 @@ from typing import Any, Callable
 MAX_NOTE_CHARS = 4000
 CRM_FIELDS = ["会社名", "相手", "次アクション", "期限", "リスク"]
 NOT_FOUND = "未検出"
+
+logger = logging.getLogger("jp_extraction_service")
 
 
 def _default_defenses_enabled() -> bool:
@@ -56,10 +60,24 @@ def _response(status_code: int, payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _calculate_estimated_cost(prompt_tokens: int | None, completion_tokens: int | None) -> tuple[float, float]:
+    """Estimate Qwen 2.5 72B inference cost in USD and INR.
+
+    Rates: $0.0004 / 1k prompt tokens, $0.0012 / 1k completion tokens.
+    Exchange rate: ~85.0 INR/USD.
+    """
+    pt = prompt_tokens or 0
+    ct = completion_tokens or 0
+    usd = (pt * 0.0004 / 1000.0) + (ct * 0.0012 / 1000.0)
+    inr = usd * 85.0
+    return round(usd, 6), round(inr, 4)
+
+
 def _check_auth(event: dict[str, Any] | None) -> tuple[bool, str | None]:
     """Verify API key authentication if EXTRACTION_API_KEY is configured.
 
     If EXTRACTION_API_KEY is not set, requests are allowed (local development/mock mode).
+    Uses hmac.compare_digest to prevent timing side-channels.
     """
     expected_key = os.getenv("EXTRACTION_API_KEY", "").strip()
     if not expected_key:
@@ -75,7 +93,7 @@ def _check_auth(event: dict[str, Any] | None) -> tuple[bool, str | None]:
         or normalized_headers.get("authorization", "").replace("Bearer ", "").strip()
     )
 
-    if not provided_key or provided_key != expected_key:
+    if not provided_key or not hmac.compare_digest(provided_key, expected_key):
         return False, "Unauthorized: invalid or missing API key."
 
     return True, None
@@ -188,6 +206,24 @@ def handle_extract(
         raw_data = {}
     fields = {field: str(raw_data.get(field, NOT_FOUND)) for field in CRM_FIELDS}
 
+    prompt_tokens = result.get("prompt_tokens")
+    completion_tokens = result.get("completion_tokens")
+    latency_s = result.get("latency")
+    est_usd, est_inr = _calculate_estimated_cost(prompt_tokens, completion_tokens)
+
+    log_entry = {
+        "event": "extraction_complete",
+        "status": 200,
+        "latency_s": latency_s,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": (prompt_tokens or 0) + (completion_tokens or 0),
+        "estimated_cost_usd": est_usd,
+        "estimated_cost_inr": est_inr,
+        "defenses_enabled": _default_defenses_enabled(),
+    }
+    logger.info(json.dumps(log_entry, ensure_ascii=False))
+
     return _response(
         200,
         {
@@ -195,9 +231,11 @@ def handle_extract(
             "data": fields,
             "meta": {
                 "defenses_enabled": _default_defenses_enabled(),
-                "latency_s": result.get("latency"),
-                "prompt_tokens": result.get("prompt_tokens"),
-                "completion_tokens": result.get("completion_tokens"),
+                "latency_s": latency_s,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "estimated_cost_usd": est_usd,
+                "estimated_cost_inr": est_inr,
             },
         },
     )

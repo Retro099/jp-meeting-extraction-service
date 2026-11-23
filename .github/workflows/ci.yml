@@ -14,4 +14,6 @@ jobs:
           python-version: "3.11"
       - run: pip install ruff pytest
       - run: ruff check .
-      - run: pytest -q
+      - run: pytest -v
+      - name: Run CI Evaluation Gate
+        run: python eval/eval_gate.py

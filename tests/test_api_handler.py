@@ -69,6 +69,10 @@ def test_handle_extract_success_dict_payload():
     assert body["meta"]["latency_s"] == 0.42
     assert body["meta"]["prompt_tokens"] == 180
     assert body["meta"]["completion_tokens"] == 45
+    assert "estimated_cost_usd" in body["meta"]
+    assert "estimated_cost_inr" in body["meta"]
+    assert body["meta"]["estimated_cost_usd"] > 0
+    assert body["meta"]["estimated_cost_inr"] > 0
 
 
 def test_handle_extract_lambda_style_body_string():
@@ -225,3 +229,36 @@ def test_handle_extract_api_key_auth(monkeypatch):
         extractor_fn=_fake_extractor_ok,
     )
     assert res_ok_bearer["statusCode"] == 200
+
+
+def test_cost_calculation_and_structured_logging(caplog):
+    from jp_extraction_service.handler import _calculate_estimated_cost
+
+    usd, inr = _calculate_estimated_cost(1000, 1000)
+    # 1000 prompt * 0.0004 / 1000 = 0.0004
+    # 1000 comp * 0.0012 / 1000 = 0.0012 -> total 0.0016 USD
+    assert usd == 0.0016
+    assert inr == round(0.0016 * 85.0, 4)
+
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="jp_extraction_service"):
+        res = handle_extract(
+            {"note": SAMPLE_NOTE},
+            client="dummy-client",
+            extractor_fn=_fake_extractor_ok,
+        )
+        assert res["statusCode"] == 200
+        found = False
+        for record in caplog.records:
+            if record.name == "jp_extraction_service":
+                entry = json.loads(record.message)
+                if entry.get("event") == "extraction_complete":
+                    assert entry["status"] == 200
+                    assert entry["prompt_tokens"] == 180
+                    assert entry["completion_tokens"] == 45
+                    assert entry["estimated_cost_usd"] > 0
+                    assert entry["estimated_cost_inr"] > 0
+                    found = True
+        assert found, "Expected structured extraction_complete log entry"
+
