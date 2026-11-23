@@ -1,0 +1,5 @@
+# Ensure line endings are LF for jsonl test files on all platforms
+* text=auto
+*.jsonl text eol=lf
+*.py text eol=lf
+*.md text eol=lf
