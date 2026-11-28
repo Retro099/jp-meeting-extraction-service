@@ -1,6 +1,6 @@
 # jp-meeting-extraction-service
 
-**Status: Step 4 deployed live on AWS Lambda (`ap-south-1`, Python `3.13`, `x86_64`) via branch `feat/step4-lambda-deploy` (PR pending review).** [[日本語]](README.ja.md)
+**Status: Step 4 deployed live on AWS Lambda (`ap-south-1`, Python `3.13`, `x86_64`) (merged to `main` in PR #2).** [[日本語]](README.ja.md)
 
 - **Live Demo Endpoint (Function URL):** `https://thcp6fpe4pdphbodm2d4c2kqlm0npixj.lambda-url.ap-south-1.on.aws` (`GET /` and `GET /health` open; `POST /extract` protected by `EXTRACTION_API_KEY` header auth + soft `50/day` per-container cap)
 
