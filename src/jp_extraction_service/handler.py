@@ -7,18 +7,59 @@ Compatible with local dict/JSON invocations, local HTTP testing, and AWS Lambda 
 
 from __future__ import annotations
 
+import base64
 import hmac
 import json
 import logging
 import os
+import threading
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Callable
 
 MAX_NOTE_CHARS = 4000
+DEFAULT_DAILY_CAP = 50
 CRM_FIELDS = ["会社名", "相手", "次アクション", "期限", "リスク"]
 NOT_FOUND = "未検出"
 
 logger = logging.getLogger("jp_extraction_service")
+
+_daily_lock = threading.Lock()
+_daily_state: dict[str, Any] = {"date": "", "count": 0}
+
+
+def reset_daily_counter() -> None:
+    """Reset the soft in-memory per-container daily request counter (for tests)."""
+    with _daily_lock:
+        _daily_state["date"] = ""
+        _daily_state["count"] = 0
+
+
+def _get_daily_cap() -> int:
+    raw = os.getenv("DAILY_REQUEST_CAP", str(DEFAULT_DAILY_CAP)).strip()
+    try:
+        cap = int(raw)
+        return cap if cap > 0 else DEFAULT_DAILY_CAP
+    except ValueError:
+        return DEFAULT_DAILY_CAP
+
+
+def _consume_daily_slot() -> tuple[bool, int, int]:
+    """Increment soft per-container UTC daily counter if under cap.
+
+    Note: In AWS Lambda this counter lives in container memory and resets on cold starts
+    or across concurrent warm instances. It is a best-effort soft guard, not a hard global limit.
+    """
+    cap = _get_daily_cap()
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    with _daily_lock:
+        if _daily_state["date"] != today:
+            _daily_state["date"] = today
+            _daily_state["count"] = 0
+        if _daily_state["count"] >= cap:
+            return False, _daily_state["count"], cap
+        _daily_state["count"] += 1
+        return True, _daily_state["count"], cap
 
 
 def _default_defenses_enabled() -> bool:
@@ -41,8 +82,8 @@ def _build_default_client() -> Any:
     return OpenAI(
         api_key=api_key,
         base_url=API_BASE_URL,
-        timeout=90,
-        max_retries=1,
+        timeout=50,
+        max_retries=0,
     )
 
 
@@ -88,15 +129,24 @@ def _check_auth(event: dict[str, Any] | None) -> tuple[bool, str | None]:
 
     headers = event.get("headers") or {}
     normalized_headers = {k.lower(): v for k, v in headers.items()}
-    provided_key = (
-        normalized_headers.get("x-api-key")
-        or normalized_headers.get("authorization", "").replace("Bearer ", "").strip()
-    )
+    auth_header = str(normalized_headers.get("authorization", "")).strip()
+    bearer_token = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+    provided_key = str(normalized_headers.get("x-api-key") or bearer_token or "").strip()
 
     if not provided_key or not hmac.compare_digest(provided_key, expected_key):
         return False, "Unauthorized: invalid or missing API key."
 
     return True, None
+
+
+def _decode_raw_body(raw_body: str, is_b64: bool) -> tuple[str | None, str | None]:
+    if not is_b64:
+        return raw_body, None
+    try:
+        decoded_bytes = base64.b64decode(raw_body, validate=True)
+        return decoded_bytes.decode("utf-8"), None
+    except (ValueError, UnicodeDecodeError):
+        return None, "Malformed base64-encoded request body."
 
 
 def _parse_event_payload(event: dict[str, Any] | str | None) -> tuple[dict[str, Any] | None, str | None]:
@@ -117,8 +167,11 @@ def _parse_event_payload(event: dict[str, Any] | str | None) -> tuple[dict[str, 
         if raw_body is None:
             return None, "Request body is empty."
         if isinstance(raw_body, str):
+            decoded_body, b64_err = _decode_raw_body(raw_body, bool(event.get("isBase64Encoded")))
+            if b64_err is not None or decoded_body is None:
+                return None, b64_err or "Malformed base64-encoded request body."
             try:
-                parsed = json.loads(raw_body)
+                parsed = json.loads(decoded_body)
             except json.JSONDecodeError:
                 return None, "Malformed JSON in request body."
             if not isinstance(parsed, dict):
@@ -147,7 +200,7 @@ def handle_extract(
             or "POST"
         ).upper()
         path = str(event.get("path") or event.get("rawPath") or "/extract")
-        if method == "GET" and path.rstrip("/") in {"/health", "/healthz"}:
+        if method == "GET" and path.rstrip("/") in {"", "/health", "/healthz"}:
             return _response(
                 200,
                 {
@@ -188,6 +241,16 @@ def handle_extract(
             client = _build_default_client()
         except Exception as exc:
             return _response(500, {"ok": False, "error": str(exc)})
+
+    allowed, _, cap = _consume_daily_slot()
+    if not allowed:
+        return _response(
+            429,
+            {
+                "ok": False,
+                "error": f"Daily demo request cap reached ({cap}/day soft per-container limit).",
+            },
+        )
 
     try:
         result = extractor_fn(client, note)

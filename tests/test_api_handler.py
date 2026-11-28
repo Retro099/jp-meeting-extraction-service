@@ -262,3 +262,94 @@ def test_cost_calculation_and_structured_logging(caplog):
                     found = True
         assert found, "Expected structured extraction_complete log entry"
 
+
+def test_function_url_root_health_base64_and_case_insensitive_bearer(monkeypatch):
+    import base64
+
+    from jp_extraction_service.handler import reset_daily_counter
+
+    reset_daily_counter()
+    monkeypatch.setenv("EXTRACTION_API_KEY", "secret-test-key-123")
+
+    # Root GET / returns 200 health without requiring API key
+    res_root = handle_extract({"requestContext": {"http": {"method": "GET"}}, "rawPath": "/"})
+    assert res_root["statusCode"] == 200
+    assert json.loads(res_root["body"])["status"] == "ok"
+
+    # Base64-encoded UTF-8 Japanese JSON payload with lowercase bearer auth
+    raw_json = json.dumps({"note": SAMPLE_NOTE}, ensure_ascii=False).encode("utf-8")
+    b64_body = base64.b64encode(raw_json).decode("ascii")
+    res_b64 = handle_extract(
+        {
+            "requestContext": {"http": {"method": "POST"}},
+            "rawPath": "/extract",
+            "headers": {"Authorization": "bearer secret-test-key-123"},
+            "body": b64_body,
+            "isBase64Encoded": True,
+        },
+        client="dummy-client",
+        extractor_fn=_fake_extractor_ok,
+    )
+    assert res_b64["statusCode"] == 200
+    assert json.loads(res_b64["body"])["data"]["会社名"] == "株式会社さくら商事"
+
+    # Invalid base64 returns 400
+    res_bad_b64 = handle_extract(
+        {
+            "requestContext": {"http": {"method": "POST"}},
+            "rawPath": "/extract",
+            "headers": {"x-api-key": "secret-test-key-123"},
+            "body": "%%%not-base64%%%",
+            "isBase64Encoded": True,
+        },
+        client="dummy-client",
+        extractor_fn=_fake_extractor_ok,
+    )
+    assert res_bad_b64["statusCode"] == 400
+
+
+def test_soft_daily_request_cap_and_exclusions(monkeypatch):
+    from jp_extraction_service.handler import reset_daily_counter
+
+    reset_daily_counter()
+    monkeypatch.setenv("DAILY_REQUEST_CAP", "2")
+    monkeypatch.setenv("EXTRACTION_API_KEY", "secret-test-key-123")
+
+    # Health checks, failed auth, and 400 validation errors must NOT count toward cap
+    assert handle_extract({"httpMethod": "GET", "path": "/health"})["statusCode"] == 200
+    assert (
+        handle_extract(
+            {"httpMethod": "POST", "path": "/extract", "body": json.dumps({"note": SAMPLE_NOTE})},
+            client="dummy-client",
+            extractor_fn=_fake_extractor_ok,
+        )["statusCode"]
+        == 401
+    )
+    assert (
+        handle_extract(
+            {
+                "httpMethod": "POST",
+                "path": "/extract",
+                "headers": {"x-api-key": "secret-test-key-123"},
+                "body": json.dumps({"note": ""}),
+            },
+            client="dummy-client",
+            extractor_fn=_fake_extractor_ok,
+        )["statusCode"]
+        == 400
+    )
+
+    valid_event = {
+        "httpMethod": "POST",
+        "path": "/extract",
+        "headers": {"x-api-key": "secret-test-key-123"},
+        "body": json.dumps({"note": SAMPLE_NOTE}, ensure_ascii=False),
+    }
+    assert handle_extract(valid_event, client="dummy-client", extractor_fn=_fake_extractor_ok)["statusCode"] == 200
+    assert handle_extract(valid_event, client="dummy-client", extractor_fn=_fake_extractor_ok)["statusCode"] == 200
+
+    res_cap = handle_extract(valid_event, client="dummy-client", extractor_fn=_fake_extractor_ok)
+    assert res_cap["statusCode"] == 429
+    assert "cap reached" in json.loads(res_cap["body"])["error"]
+    reset_daily_counter()
+

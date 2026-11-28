@@ -7,11 +7,14 @@ permissions:
 jobs:
   lint-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
       - run: pip install ruff pytest
       - run: ruff check .
       - run: pytest -v
@@ -20,11 +23,14 @@ jobs:
 
   package-smoke-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
       - name: Install dependencies and package in editable mode
         run: |
           pip install -r requirements.txt
