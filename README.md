@@ -1,8 +1,10 @@
 # jp-meeting-extraction-service
 
-**Status: Feature branch `feat/step3-api-handler` (Step 3: Local API Handler, Tests, Zero-Cost CI Gate, Threat Model Complete). Pull request pending review.** [[日本語]](README.ja.md)
+**Status: Step 4 deployed live on AWS Lambda (`ap-south-1`, Python `3.13`, `x86_64`) via branch `feat/step4-lambda-deploy` (PR pending review).** [[日本語]](README.ja.md)
 
-A local HTTP service and Lambda-style handler for extracting structured CRM fields from Japanese business meeting notes. Built as the operational service layer for the core engine [Retro099/jp-meeting-to-crm-fields](https://github.com/Retro099/jp-meeting-to-crm-fields).
+- **Live Demo Endpoint (Function URL):** `https://thcp6fpe4pdphbodm2d4c2kqlm0npixj.lambda-url.ap-south-1.on.aws` (`GET /` and `GET /health` open; `POST /extract` protected by `EXTRACTION_API_KEY` header auth + soft `50/day` per-container cap)
+
+A local HTTP service and AWS Lambda handler for extracting structured CRM fields from Japanese business meeting notes. Built as the operational service layer for the core engine [Retro099/jp-meeting-to-crm-fields](https://github.com/Retro099/jp-meeting-to-crm-fields).
 
 ```bash
 # Check out the reviewed feature branch:
@@ -157,7 +159,7 @@ Server response:
 1. **Synthetic Evaluation Set**: All 30 test meeting notes and 20 held-out attacks are synthetic benchmarks; no customer data is present or stored.
 2. **Exact-Match Sensitivity**: Character-level exact match strictly penalizes phrasing variations in `次アクション` and `リスク`.
 3. **Core Dependency Pin**: Core engine is pinned to `v1.0.0` (`7e24c955`), whereas official 59.8% baseline derived from core eval v2 protocol.
-4. **Cloud Deployment**: AWS Lambda live deployment is planned (Step 4 of `PLAN.md`). Zero-cost CI integrity gate is active in GitHub Actions.
+4. **Cloud Deployment & Guardrails**: Live demo deployed to AWS Lambda (`ap-south-1` Mumbai, Python `3.13`, `x86_64`, `512 MB`, `60s` timeout, `7`-day CloudWatch retention) via Function URL. Unauthenticated `POST /extract` is blocked (`401`); the `50/day` daily counter is a soft per-container guard that resets on cold starts/scaling. Zero-cost CI integrity gate is active in GitHub Actions (Python `3.11` & `3.13`).
 
 ---
 
